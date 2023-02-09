@@ -7,6 +7,10 @@ class Direction(Enum):
     RIGHT = "Right"
     UP = "Up"
     DOWN = "Down"
+    UP_RIGHT = "UpRight"
+    UP_LEFT = "UpLeft"
+    DOWN_RIGHT = "DownRight"
+    DOWN_LEFT = "DownLeft"
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos, size, world_size):
@@ -18,6 +22,10 @@ class Player(pygame.sprite.Sprite):
         self.world_bounds = world_size
         self.x_velocity = 0
         self.y_velocity = 0
+        self.right_pixels = []
+        self.left_pixels = []
+        self.top_pixels = []
+        self.bottom_pixels = []
         self.movement_enabled = True
         self.allow_outofbounds = False
         self.has_collision = True
@@ -35,6 +43,36 @@ class Player(pygame.sprite.Sprite):
         if direction == Direction.RIGHT:
             self.validate_pos((self.pos[0] + 10, self.pos[1]))
             self.x_velocity = 10
+        if direction == Direction.UP_LEFT:
+            self.validate_pos((self.pos[0] - 10, self.pos[1] - 10))
+            self.x_velocity = -10
+            self.y_velocity = -10
+        if direction == Direction.UP_RIGHT:
+            self.validate_pos((self.pos[0] + 10, self.pos[1] - 10))
+            self.x_velocity = 10
+            self.y_velocity = -10
+        if direction == Direction.DOWN_LEFT:
+            self.validate_pos((self.pos[0] - 10, self.pos[1] + 10))
+            self.x_velocity = -10
+            self.y_velocity = 10
+        if direction == Direction.DOWN_RIGHT:
+            self.validate_pos((self.pos[0] + 10, self.pos[1] + 10))
+            self.x_velocity = 10
+            self.y_velocity = 10
+
+    def set_pixel_dims(self):
+        # Right pixels
+        for p in range(self.rect.bottomright, self.rect.topright):
+            self.right_pixels.append(p)
+        # Left pixels
+        for p in range(self.rect.bottomleft, self.rect.topleft):
+            self.right_pixels.append(p)
+        # Top pixels
+        for p in range(self.rect.topright, self.rect.topleft):
+            self.right_pixels.append(p)
+        # Bottom pixels
+        for p in range(self.rect.bottomleft, self.rect.bottomright):
+            self.right_pixels.append(p)
 
     def validate_pos(self, pos):
         # Check for collision
@@ -62,8 +100,9 @@ class Player(pygame.sprite.Sprite):
             for sprite in self.collision_group:
                 if self.rect.colliderect(sprite.rect) and sprite.has_collision:
                     # Player right collides with sprite left
-                    #if self.x_velocity > 0:
-                    return True
+                    if self.rect.right == sprite.rect.left:
+                        self.pos = (sprite.pos[0] - self.rect.size[0], self.pos[1])
+                        return True
         return False
     
     def set_collision_group(self, group):
@@ -75,18 +114,19 @@ class Player(pygame.sprite.Sprite):
 
     def get_input(self):
         keys = pygame.key.get_pressed()
-
-        if len(keys) == 1:
-            if keys[pygame.K_RIGHT] and self.movement_enabled:
-                self.move(Direction.RIGHT)
-            if keys[pygame.K_LEFT] and self.movement_enabled:
-                self.move(Direction.LEFT)
-            if keys[pygame.K_UP] and self.movement_enabled:
-                self.move(Direction.UP)
-            if keys[pygame.K_DOWN] and self.movement_enabled:
-                self.move(Direction.DOWN)
-        if len(keys) == 2:
-            #TODO: Multi-arrow movement code
+        # Right
+        if keys[pygame.K_RIGHT] and self.movement_enabled:
+            self.move(Direction.RIGHT)
+        # Left
+        if keys[pygame.K_LEFT] and self.movement_enabled:
+            self.move(Direction.LEFT)
+        # Up
+        if keys[pygame.K_UP] and self.movement_enabled:
+            self.move(Direction.UP)
+        # Down
+        if keys[pygame.K_DOWN] and self.movement_enabled:
+            self.move(Direction.DOWN)
+        # Invalid inputs
         if not keys:
             self.x_velocity = 0
             self.y_velocity = 0
