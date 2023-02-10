@@ -1,8 +1,10 @@
+import math
 import pygame
 
 from enum import Enum
 
 class Direction(Enum):
+    STATIC = "Static"
     LEFT = "Left"
     RIGHT = "Right"
     UP = "Up"
@@ -19,90 +21,108 @@ class Player(pygame.sprite.Sprite):
         self.image = pygame.Surface((size[0] , size[1]))
         self.image.fill("red")
         self.rect = self.image.get_rect(topleft = pos)
+        self.rect_pixels = []
         self.world_bounds = world_size
         self.x_velocity = 0
         self.y_velocity = 0
-        self.right_pixels = []
-        self.left_pixels = []
-        self.top_pixels = []
-        self.bottom_pixels = []
+        self.direction = Direction.STATIC
         self.movement_enabled = True
         self.allow_outofbounds = False
         self.has_collision = True
 
-    def move(self, direction: Direction):
+    def set_rect_pixels(self):
+        for x in range(self.rect.topleft[0], self.rect.topright[0] + 1):
+            for y in range(self.rect.topright[1], self.rect.bottomright[1] + 1):
+                self.rect_pixels.append((x, y))
+
+    def move(self, direction: Direction) -> tuple[int, int, pygame.Rect,  int, int, Direction]:
+        """
+        Takes in an input direction, and returns:
+        Tuple[int, int, int, int, Direction]
+        int: new x pos
+        int: new y pos
+        rect: new rect
+        int: new x velocity
+        int: new y velocity
+        Direction: new Direction
+        """
         if direction == Direction.UP:
-           self.validate_pos((self.pos[0], self.pos[1] - 10))
-           self.y_velocity = -10
+            new_rect = self.rect
+            new_rect.y -= 10
+            return (self.pos[0], self.pos[1] - 10, new_rect, 0, 10, Direction.UP)
         if direction == Direction.DOWN:
-            self.validate_pos((self.pos[0], self.pos[1] + 10))
-            self.y_velocity = 10
+            new_rect = self.rect
+            new_rect.y += 10
+            return (self.pos[0], self.pos[1] + 10, new_rect, 0, 10, Direction.DOWN)
         if direction == Direction.LEFT:
-            self.validate_pos((self.pos[0] - 10, self.pos[1]))
-            self.x_velocity = -10
+            new_rect = self.rect
+            new_rect.x -= 10
+            return (self.pos[0] - 10, self.pos[1], new_rect, -10, 0, Direction.LEFT)
         if direction == Direction.RIGHT:
-            self.validate_pos((self.pos[0] + 10, self.pos[1]))
-            self.x_velocity = 10
+            new_rect = self.rect
+            new_rect.x += 10
+            return (self.pos[0] + 10, self.pos[1], new_rect, 10, 0, Direction.RIGHT)
         if direction == Direction.UP_LEFT:
-            self.validate_pos((self.pos[0] - 10, self.pos[1] - 10))
+            self.validate_pos((self.pos[0] - 10, self.pos[1] - 10), self.rect)
             self.x_velocity = -10
             self.y_velocity = -10
         if direction == Direction.UP_RIGHT:
-            self.validate_pos((self.pos[0] + 10, self.pos[1] - 10))
+            self.validate_pos((self.pos[0] + 10, self.pos[1] - 10), self.rect)
             self.x_velocity = 10
             self.y_velocity = -10
         if direction == Direction.DOWN_LEFT:
-            self.validate_pos((self.pos[0] - 10, self.pos[1] + 10))
+            self.validate_pos((self.pos[0] - 10, self.pos[1] + 10), self.rect)
             self.x_velocity = -10
             self.y_velocity = 10
         if direction == Direction.DOWN_RIGHT:
-            self.validate_pos((self.pos[0] + 10, self.pos[1] + 10))
+            self.validate_pos((self.pos[0] + 10, self.pos[1] + 10), self.rect)
             self.x_velocity = 10
             self.y_velocity = 10
 
-    def set_pixel_dims(self):
-        # Right pixels
-        for p in range(self.rect.bottomright, self.rect.topright):
-            self.right_pixels.append(p)
-        # Left pixels
-        for p in range(self.rect.bottomleft, self.rect.topleft):
-            self.right_pixels.append(p)
-        # Top pixels
-        for p in range(self.rect.topright, self.rect.topleft):
-            self.right_pixels.append(p)
-        # Bottom pixels
-        for p in range(self.rect.bottomleft, self.rect.bottomright):
-            self.right_pixels.append(p)
-
-    def validate_pos(self, pos):
+    def validate_pos(self, pos, rect):
         # Check for collision
-        collision = self.check_collision(pos)
+        #print(f"Validating pos: {pos}")
+        collision = self.check_collision(pos, rect)
 
         # If all checks pass, set final pos to checked pos
         if not collision:
-            self.pos = pos
+            return pos
+        return self.last_pos
 
-    def check_collision(self, pos):
+    def check_collision(self, pos, rect):
         if not self.allow_outofbounds:
             if pos[0] <= 0:
-                self.pos = (0, self.pos[1])
+                self.pos = (1, self.pos[1])
                 return True
             if pos[1] <= 0:
-                self.pos = (self.pos[0], 0)
+                self.pos = (self.pos[0], 1)
                 return True
             if pos[0] >= self.world_bounds[0] - self.rect.size[0]:
-                self.pos = (self.world_bounds[0] - self.rect.size[0], self.pos[1])
+                self.pos = ((self.world_bounds[0] - self.rect.size[0]) - 1, self.pos[1])
                 return True
             if pos[1] >= self.world_bounds[1] - self.rect.size[1]:
-                self.pos = (self.pos[0], self.world_bounds[1] - self.rect.size[1])
+                self.pos = (self.pos[0], (self.world_bounds[1] - self.rect.size[1]) - 1)
                 return True
         if self.has_collision:
+            #TODO: Player corner collision
             for sprite in self.collision_group:
-                if self.rect.colliderect(sprite.rect) and sprite.has_collision:
-                    # Player right collides with sprite left
-                    if self.rect.right == sprite.rect.left:
-                        self.pos = (sprite.pos[0] - self.rect.size[0], self.pos[1])
+                if rect.colliderect(sprite.rect) and sprite.has_collision:
+                    if ((rect.right, (rect.topright[1] + math.floor(self.rect.size[1] / 2))) in sprite.rect_pixels):
+                        #self.pos = (sprite.rect.left - self.rect.size[0], self.pos[1])
                         return True
+                    # Player left collides with sprite right
+                    elif ((rect.left, (rect.topleft[1] + math.floor(self.rect.size[1] / 2))) in sprite.rect_pixels):
+                        #self.pos = (sprite.rect.right, self.pos[1])
+                        return True
+                    # Player bottom collides with sprite top
+                    elif (((rect.bottomleft[0] + math.floor(rect.size[0] / 2)), rect.bottom)):
+                        #self.pos = (self.pos[0], sprite.rect.top - self.rect.size[1])
+                        return True
+                    # Player top collides with sprite bottom
+                    elif (((rect.topleft[0] + math.floor(rect.size[0] / 2)), rect.top)):
+                        #self.pos = (self.pos[0], sprite.rect.bottom)
+                        return True
+                return False
         return False
     
     def set_collision_group(self, group):
@@ -113,30 +133,43 @@ class Player(pygame.sprite.Sprite):
         self.y_velocity = y
 
     def get_input(self):
+        """
+        Depending on the direction pressed, return future position values to be checked for collision
+        """
         keys = pygame.key.get_pressed()
         # Right
-        if keys[pygame.K_RIGHT] and self.movement_enabled:
-            self.move(Direction.RIGHT)
+        if keys[pygame.K_d] and self.movement_enabled:
+            movement = self.move(Direction.RIGHT)
+            return movement
         # Left
-        if keys[pygame.K_LEFT] and self.movement_enabled:
-            self.move(Direction.LEFT)
+        if keys[pygame.K_a] and self.movement_enabled:
+            movement = self.move(Direction.LEFT)
+            return movement
         # Up
-        if keys[pygame.K_UP] and self.movement_enabled:
-            self.move(Direction.UP)
+        if keys[pygame.K_w] and self.movement_enabled:
+            movement = self.move(Direction.UP)
+            return movement
         # Down
-        if keys[pygame.K_DOWN] and self.movement_enabled:
-            self.move(Direction.DOWN)
+        if keys[pygame.K_s] and self.movement_enabled:
+            movement = self.move(Direction.DOWN)
+            return movement
         # Invalid inputs
-        if not keys:
-            self.x_velocity = 0
-            self.y_velocity = 0
+        if not any(keys):
+            return (self.pos[0], self.pos[1], self.rect, 0, 0, Direction.STATIC)
 
     def update(self):
-        self.get_input()
+        # Return future movement positions
+        data = self.get_input()
         self.last_pos = self.pos
-        self.check_collision(self.pos)
-        self.rect.x = self.pos[0]
-        self.rect.y = self.pos[1]
+        #print(f"Current pos: {self.pos}")
+        # Validate the future positions to make sure they are possible movements before actually setting them
+        new_pos = self.validate_pos((data[0], data[1]), data[2])
+        # Update the position with either the old position due to an invalid move or the newly validated position
+        self.pos = new_pos
+        #print(f"New pos: {new_pos}")
+        # Update the visible rectangle
+        self.rect.x = new_pos[0]
+        self.rect.y = new_pos[1]
 
 class Wall(pygame.sprite.Sprite):
     def __init__(self, pos, size, world_size):
@@ -145,10 +178,16 @@ class Wall(pygame.sprite.Sprite):
         self.image = pygame.Surface((size[0] , size[1]))
         self.image.fill("cyan")
         self.rect = self.image.get_rect(topleft = pos)
+        self.rect_pixels = []
         self.x_velocity = 0
         self.y_velocity = 0
         self.movement_enabled = False
         self.allow_outofbounds = False
         self.has_collision = True
 
-    
+        self.set_rect_pixels()
+
+    def set_rect_pixels(self):
+        for x in range(self.rect.topleft[0], self.rect.topright[0] + 1):
+            for y in range(self.rect.topright[1], self.rect.bottomright[1] + 1):
+                self.rect_pixels.append((x, y))

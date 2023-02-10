@@ -5,7 +5,7 @@ import pygame
 from sprite import Player, Wall
 
 # Init screen and size
-width, height = 1280, 720
+width, height = 600, 600
 screen = pygame.display.set_mode((width , height))
 
 # Define sprite groups
@@ -13,8 +13,8 @@ player_sprites = pygame.sprite.Group()
 wall_sprites = pygame.sprite.Group()
 
 # Create sprites and add them to groups
-player = Player((150, 150), (25, 25), (width, height))
-wall = Wall((700, 400), (25, 250), (width, height))
+player = Player((200, 200), (20, 20), (width, height))
+wall = Wall((300, 300), (20, 150), (width, height))
 player_sprites.add(player)
 wall_sprites.add(wall)
 
@@ -35,9 +35,11 @@ while running:
     wall_sprites.draw(screen)
 
     # Update player data every tick
+    main_player = None
     for player in player_sprites:
         player.movement_enabled = True
         player.set_collision_group(wall_sprites)
+        main_player = player
     player_sprites.update()
     pygame.display.update()
 
