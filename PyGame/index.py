@@ -14,7 +14,7 @@ wall_sprites = pygame.sprite.Group()
 
 # Create sprites and add them to groups
 player = Player((200, 200), (20, 20), (width, height))
-wall = Wall((300, 300), (20, 150), (width, height))
+wall = Wall((0, 500), (600, 20), (width, height))
 player_sprites.add(player)
 wall_sprites.add(wall)
 
@@ -38,6 +38,7 @@ while running:
     main_player = None
     for player in player_sprites:
         player.movement_enabled = True
+        player.gravity = True
         player.set_collision_group(wall_sprites)
         main_player = player
     player_sprites.update()
