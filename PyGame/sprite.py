@@ -1,31 +1,27 @@
 import math
 import pygame
 
+from projectile import BaseProjectile
+
 from enum import Enum
 
-class Direction(Enum):
-    STATIC = "Static"
-    LEFT = "Left"
-    RIGHT = "Right"
-    UP = "Up"
-    DOWN = "Down"
-    UP_RIGHT = "UpRight"
-    UP_LEFT = "UpLeft"
-    DOWN_RIGHT = "DownRight"
-    DOWN_LEFT = "DownLeft"
+from utils.direction import Direction
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, size, world_size):
+    def __init__(self, pos, size, screen: pygame.Surface):
         super().__init__()
         self.pos = pos
+        self.screen = screen
         self.image = pygame.Surface((size[0] , size[1]))
-        self.image.fill("red")
+        self.image.fill("cyan")
         self.rect = self.image.get_rect(topleft = pos)
         self.rect_pixels = []
-        self.world_bounds = world_size
+        self.world_bounds = (screen.get_width, screen.get_height)
+        self.projectile_group = pygame.sprite.Group()
         self.x_velocity = 0
         self.y_velocity = 0
         self.direction = Direction.STATIC
+        self.facing = Direction.RIGHT
         self.movement_enabled = True
         self.allow_outofbounds = False
         self.has_collision = True
@@ -139,6 +135,7 @@ class Player(pygame.sprite.Sprite):
         keys = pygame.key.get_pressed()
         # Right
         if keys[pygame.K_d] and self.movement_enabled:
+            self.facing = Direction.DOWN
             movement = self.move(Direction.RIGHT)
             return movement
         # Left
@@ -153,6 +150,8 @@ class Player(pygame.sprite.Sprite):
         if keys[pygame.K_s] and self.movement_enabled:
             movement = self.move(Direction.DOWN)
             return movement
+        if keys[pygame.K_SPACE]:
+            new_proj = BaseProjectile(self, (5, 5), self.screen)
         # Invalid inputs
         if not any(keys):
             return (self.pos[0], self.pos[1], self.rect, 0, 0, Direction.STATIC)
@@ -176,7 +175,7 @@ class Wall(pygame.sprite.Sprite):
         super().__init__()
         self.pos = pos
         self.image = pygame.Surface((size[0] , size[1]))
-        self.image.fill("cyan")
+        self.image.fill("gray")
         self.rect = self.image.get_rect(topleft = pos)
         self.rect_pixels = []
         self.x_velocity = 0

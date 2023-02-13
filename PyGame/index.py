@@ -13,7 +13,7 @@ player_sprites = pygame.sprite.Group()
 wall_sprites = pygame.sprite.Group()
 
 # Create sprites and add them to groups
-player = Player((200, 200), (20, 20), (width, height))
+player = Player((200, 200), (20, 20), screen)
 wall = Wall((300, 300), (20, 150), (width, height))
 player_sprites.add(player)
 wall_sprites.add(wall)
